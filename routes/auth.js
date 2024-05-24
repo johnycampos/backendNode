@@ -2,34 +2,30 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { Pool } = require('pg');
+const { pool } = require('../db'); // Importa o pool do arquivo db.js
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
-// Register
+// Registro
 router.post('/register', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, role } = req.body;
 
-    // Check if user exists
+    // Verifica se o usuário existe
     const userExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    if (userExists.rows.length > 0) return res.status(400).json({ message: 'Usuario já existe' });
+    if (userExists.rows.length > 0) {
+      console.log('Usuário já existe');
+      return res.status(400).json({ message: 'Usuário já existe' });
+    }
 
-    // Hash password
+    // Hash da senha
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user into database
-    await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
+    // Insere usuário no banco de dados
+    await pool.query('INSERT INTO users (username, password, role) VALUES ($1, $2 ,$3)', [username, hashedPassword, role]);
 
-    res.status(201).json({ message: 'Usuario Registrado com sucesso' });
+    res.status(201).json({ message: 'Usuário registrado com sucesso' });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).send('Erro no servidor');
   }
 });
 
@@ -38,28 +34,32 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Check if user exists
+    // Verifica se o usuário existe
     const user = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     if (user.rows.length === 0) return res.status(400).json({ message: 'Login inválido' });
 
-    // Check password
+    // Verifica a senha
     const isMatch = await bcrypt.compare(password, user.rows[0].password);
     if (!isMatch) return res.status(400).json({ message: 'Senha errada' });
 
-    // Generate token
+
+    console.log(user)
+
+    // Gera token
     const payload = {
       user: {
         id: user.rows[0].id
-      }
+      },
+      autenticado: true
     };
 
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
       if (err) throw err;
-      res.json({ token });
+      res.json({ token, autenticado: true, role: user.rows[0].role });
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).send('Erro no servidor');
   }
 });
 
