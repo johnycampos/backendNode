@@ -43,9 +43,9 @@ router.post('/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: 'Senha errada' });
 
 
-    console.log(user)
+    // console.log(user)
 
-    // Gera token
+    // Gera token 
     const payload = {
       user: {
         id: user.rows[0].id
@@ -53,9 +53,27 @@ router.post('/login', async (req, res) => {
       autenticado: true
     };
 
+
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
       if (err) throw err;
-      res.json({ token, autenticado: true, role: user.rows[0].role });
+      
+      res.json({
+        userData: {
+          id: user.rows[0].id,
+          fullName: user.rows[0].username,
+          username: 'johndoe',
+          avatar: '/src/assets/images/avatars/avatar-1.png',
+          email: 'admin@demo.com',
+          role: user.rows[0].role,
+        },
+        accessToken: token,
+        userAbilities: [
+          {action: 'manage', subject: 'all'}
+        ]
+  
+      });
+      // res.status(200).send('Erro no servidor');
+
     });
   } catch (err) {
     console.error(err.message);
