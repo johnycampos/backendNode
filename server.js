@@ -23,6 +23,15 @@ const pool = new Pool({
 // Verifica e cria tabela no início
 createUsersTable();
 
+// Rota de teste
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'API está online!',
+    timestamp: new Date().toISOString(),
+    status: 'success'
+  });
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 

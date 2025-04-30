@@ -34,6 +34,17 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
+    // Validação dos campos obrigatórios
+    if (!username || !password) {
+      return res.status(400).json({ 
+        message: 'Dados inválidos',
+        errors: {
+          username: !username ? 'Username é obrigatório' : null,
+          password: !password ? 'Password é obrigatório' : null
+        }
+      });
+    }
+
     // Verifica se o usuário existe
     const user = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
     if (user.rows.length === 0) return res.status(400).json({ message: 'Login inválido' });
@@ -42,9 +53,6 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.rows[0].password);
     if (!isMatch) return res.status(400).json({ message: 'Senha errada' });
 
-
-    // console.log(user)
-
     // Gera token 
     const payload = {
       user: {
@@ -52,7 +60,6 @@ router.post('/login', async (req, res) => {
       },
       autenticado: true
     };
-
 
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
       if (err) throw err;
@@ -70,10 +77,7 @@ router.post('/login', async (req, res) => {
         userAbilities: [
           {action: 'manage', subject: 'all'}
         ]
-  
       });
-      // res.status(200).send('Erro no servidor');
-
     });
   } catch (err) {
     console.error(err.message);
