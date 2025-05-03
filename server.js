@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors'); // Importe o cors
 const { Pool } = require('pg');
-const { createUsersTable } = require('./db');
+const { createUsersTable, createFabricantesTable, createGruposTable, createSubgruposTable, createUnidadesTable, createLocaisEstoqueTable, createItensTable } = require('./db');
 require('dotenv').config();
 
 const app = express();
@@ -20,8 +20,14 @@ const pool = new Pool({
   }
 });
 
-// Verifica e cria tabela no início
+// Verifica e cria tabelas no início
 createUsersTable();
+createFabricantesTable();
+createGruposTable();
+createSubgruposTable();
+createUnidadesTable();
+createLocaisEstoqueTable();
+createItensTable();
 
 // Rota de teste
 app.get('/api/test', (req, res) => {
@@ -34,6 +40,12 @@ app.get('/api/test', (req, res) => {
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/fabricantes', require('./routes/fabricantes'));
+app.use('/api/grupos', require('./routes/grupos'));
+app.use('/api/subgrupos', require('./routes/subgrupos'));
+app.use('/api/unidades', require('./routes/unidades'));
+app.use('/api/locais-estoque', require('./routes/locaisEstoque'));
+app.use('/api/itens', require('./routes/itemRoutes'));
 
 // Start server
 const PORT = process.env.PORT || 5000;
