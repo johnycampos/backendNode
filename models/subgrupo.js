@@ -29,7 +29,7 @@ class Subgrupo {
       SELECT s.*, g.nome as grupo_nome 
       FROM subgrupos s
       JOIN grupos g ON s.grupo_id = g.id
-      WHERE s.id = $1
+      WHERE s.grupo_id = $1
     `;
     const result = await pool.query(query, [id]);
     return result.rows[0];
