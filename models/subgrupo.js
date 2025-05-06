@@ -32,7 +32,7 @@ class Subgrupo {
       WHERE s.grupo_id = $1
     `;
     const result = await pool.query(query, [id]);
-    return result.rows[0];
+    return result.rows;
   }
 
   static async atualizar(id, subgrupo) {
