@@ -75,8 +75,16 @@ class ItemController {
 
   static async atualizarEstoque(req, res) {
     try {
-      const { quantidade } = req.body;
-      const item = await Item.atualizarEstoque(req.params.id, quantidade);
+      const { quantidade, operacao } = req.body;
+      
+      if (!operacao || !['adicionar', 'remover'].includes(operacao)) {
+        return res.status(400).json({ error: 'Operação inválida. Use "adicionar" ou "remover"' });
+      }
+
+      // Ajusta a quantidade baseado na operação
+      const quantidadeAjustada = operacao === 'adicionar' ? quantidade : -quantidade;
+      
+      const item = await Item.atualizarEstoque(req.params.id, quantidadeAjustada);
       if (!item) {
         return res.status(404).json({ error: 'Item não encontrado' });
       }
