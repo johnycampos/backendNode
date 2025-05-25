@@ -1,4 +1,5 @@
 const { pool } = require('../db');
+const Item = require('./item');
 
 class Venda {
   static async criar(vendaData) {
@@ -60,13 +61,8 @@ class Venda {
 
         await client.query(itemVendaQuery, itemVendaValues);
 
-        // Atualizar o estoque do item
-        const atualizarEstoqueQuery = `
-          UPDATE itens
-          SET quantidade_disponivel = quantidade_disponivel - $1
-          WHERE id = $2
-        `;
-        await client.query(atualizarEstoqueQuery, [item.quantidade, item.item_id]);
+        // Atualizar o estoque usando o método do modelo Item
+        await Item.atualizarEstoque(item.item_id, -item.quantidade);
       }
 
       await client.query('COMMIT');
