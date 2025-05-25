@@ -46,6 +46,7 @@ app.use('/api/subgrupos', require('./routes/subgrupos'));
 app.use('/api/unidades', require('./routes/unidades'));
 app.use('/api/locais-estoque', require('./routes/locaisEstoque'));
 app.use('/api/itens', require('./routes/itemRoutes'));
+app.use('/api/vendas', require('./routes/vendaRoutes'));
 
 // Start server
 const PORT = process.env.PORT || 5000;
