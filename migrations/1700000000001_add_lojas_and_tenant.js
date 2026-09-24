@@ -17,7 +17,7 @@ exports.up = (pgm) => {
     -- 1. Criação da tabela de lojas (tenants)
     CREATE TABLE IF NOT EXISTS lojas (
       id SERIAL PRIMARY KEY,
-      nome VARCHAR(100) NOT NULL,
+      nome VARCHAR(100) NOT NULL UNIQUE,
       is_matriz BOOLEAN NOT NULL DEFAULT false,
       ativo BOOLEAN NOT NULL DEFAULT true,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -29,7 +29,7 @@ exports.up = (pgm) => {
       ('Real Revision', true, true),
       ('Nitori', false, true),
       ('Baby Real Revision', false, true)
-    ON CONFLICT DO NOTHING;
+    ON CONFLICT (nome) DO NOTHING;
 
     -- 3. Adicionar coluna loja_id em users, itens e locais_estoque
     ALTER TABLE users ADD COLUMN IF NOT EXISTS loja_id INTEGER REFERENCES lojas(id);

@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Fabricante = require('../models/fabricante');
+const authMiddleware = require('../middleware/auth');
+
+// Todas as rotas de fabricantes requerem autenticação
+router.use(authMiddleware);
 
 // Listar todos os fabricantes
 router.get('/', async (req, res) => {

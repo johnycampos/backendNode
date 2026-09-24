@@ -1,5 +1,6 @@
 const Venda = require('../models/venda');
 const Item = require('../models/item');
+const Loja = require('../models/loja');
 
 class VendaController {
   static async criar(req, res) {
@@ -11,12 +12,17 @@ class VendaController {
         return res.status(400).json({ error: 'A venda deve conter pelo menos um item' });
       }
 
-      // Atribuir loja_id e vendedor_id a partir do contexto autenticado se não informados
-      if (!vendaData.loja_id) {
-        vendaData.loja_id = (req.role === 'super_admin' && req.body.loja_id)
-          ? req.body.loja_id
-          : req.lojaId;
+      // Atribuir loja_id validando se fornecido por super_admin
+      let loja_id = req.lojaId;
+      if (req.role === 'super_admin' && req.body.loja_id) {
+        const lojaValida = await Loja.buscarPorId(req.body.loja_id);
+        if (!lojaValida || !lojaValida.ativo) {
+          return res.status(400).json({ error: 'Loja informada não existe ou está inativa' });
+        }
+        loja_id = req.body.loja_id;
       }
+
+      vendaData.loja_id = loja_id;
 
       if (!vendaData.loja_id) {
         return res.status(400).json({ error: 'ID da loja é obrigatório' });

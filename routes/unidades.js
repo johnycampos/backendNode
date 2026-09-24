@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Unidade = require('../models/unidade');
+const authMiddleware = require('../middleware/auth');
+
+// Todas as rotas de unidades requerem autenticação
+router.use(authMiddleware);
 
 // Listar todas as unidades
 router.get('/', async (req, res) => {

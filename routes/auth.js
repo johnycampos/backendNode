@@ -34,16 +34,20 @@ router.post('/register', async (req, res) => {
     // Se loja_id não fornecido, vincula à matriz por default
     if (!loja_id) {
       const matriz = await Loja.buscarMatriz();
-      loja_id = matriz ? matriz.id : 1;
+      if (!matriz) {
+        return res.status(400).json({ message: 'Nenhuma loja matriz encontrada no sistema' });
+      }
+      loja_id = matriz.id;
     } else {
       const lojaExiste = await Loja.buscarPorId(loja_id);
-      if (!lojaExiste) {
-        return res.status(400).json({ message: 'Loja informada não existe' });
+      if (!lojaExiste || !lojaExiste.ativo) {
+        return res.status(400).json({ message: 'Loja informada não existe ou está inativa' });
       }
     }
 
-    // Default de papel é funcionario se não fornecido
-    role = role || 'funcionario';
+    // Registro público SEMPRE força role='funcionario' para evitar autopromoção
+    // Criação de admin_loja e super_admin é exclusiva de administradores autenticados (Fase 5)
+    const role = 'funcionario';
 
     // Verifica se o usuário já existe
     const userExists = await Usuario.buscarPorUsername(username);

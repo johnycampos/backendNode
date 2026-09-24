@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const LocalEstoque = require('../models/localEstoque');
+const Loja = require('../models/loja');
 const authMiddleware = require('../middleware/auth');
 
 // Todas as rotas de locais de estoque requerem autenticação
@@ -45,9 +46,14 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Nome é obrigatório' });
     }
 
-    const loja_id = (req.role === 'super_admin' && req.body.loja_id)
-      ? req.body.loja_id
-      : req.lojaId;
+    let loja_id = req.lojaId;
+    if (req.role === 'super_admin' && req.body.loja_id) {
+      const lojaValida = await Loja.buscarPorId(req.body.loja_id);
+      if (!lojaValida || !lojaValida.ativo) {
+        return res.status(400).json({ message: 'Loja informada não existe ou está inativa' });
+      }
+      loja_id = req.body.loja_id;
+    }
 
     if (!loja_id) {
       return res.status(400).json({ message: 'Loja não identificada para associar ao local de estoque' });

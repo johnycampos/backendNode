@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Subgrupo = require('../models/subgrupo');
+const authMiddleware = require('../middleware/auth');
+
+// Todas as rotas de subgrupos requerem autenticação
+router.use(authMiddleware);
 
 // Listar todos os subgrupos
 router.get('/', async (req, res) => {

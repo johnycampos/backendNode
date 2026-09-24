@@ -1,11 +1,17 @@
 const Item = require('../models/item');
+const Loja = require('../models/loja');
 
 class ItemController {
   static async criar(req, res) {
     try {
-      const loja_id = (req.role === 'super_admin' && req.body.loja_id)
-        ? req.body.loja_id
-        : req.lojaId;
+      let loja_id = req.lojaId;
+      if (req.role === 'super_admin' && req.body.loja_id) {
+        const lojaValida = await Loja.buscarPorId(req.body.loja_id);
+        if (!lojaValida || !lojaValida.ativo) {
+          return res.status(400).json({ error: 'Loja informada não existe ou está inativa' });
+        }
+        loja_id = req.body.loja_id;
+      }
 
       if (!loja_id) {
         return res.status(400).json({ error: 'Loja não identificada para associar ao item' });
