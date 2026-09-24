@@ -4,6 +4,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Usuario = require('../models/usuario');
 const Loja = require('../models/loja');
+const Menu = require('../models/menu');
+const authMiddleware = require('../middleware/auth');
 
 // Listar lojas ativas (para seleção em login/cadastro ou contexto)
 router.get('/lojas', async (req, res) => {
@@ -12,6 +14,34 @@ router.get('/lojas', async (req, res) => {
     res.json(lojas);
   } catch (err) {
     console.error('Erro ao listar lojas:', err.message);
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+});
+
+// Endpoint de perfil e menus habilitados do usuário logado
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await Usuario.buscarPorId(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
+    const menusHabilitados = await Menu.listarHabilitadosPorUsuario(user.id);
+
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        loja_id: user.loja_id,
+        loja_nome: user.loja_nome,
+        is_matriz: user.is_matriz
+      },
+      menus: menusHabilitados,
+      menusChaves: menusHabilitados.map(m => m.chave)
+    });
+  } catch (err) {
+    console.error('Erro em /auth/me:', err.message);
     res.status(500).json({ message: 'Erro no servidor' });
   }
 });
@@ -100,6 +130,10 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Senha errada' });
 
+    // Busca os menus habilitados para o usuário logado
+    const menus = await Menu.listarHabilitadosPorUsuario(user.id);
+    const menusChaves = menus.map(m => m.chave);
+
     // Gera token com loja_id e role incluídos no payload
     const payload = {
       id: user.id,
@@ -127,8 +161,11 @@ router.post('/login', async (req, res) => {
           email: `${user.username}@realrevision.com`,
           role: user.role,
           loja_id: user.loja_id,
-          loja_nome: user.loja_nome
+          loja_nome: user.loja_nome,
+          menus: menusChaves
         },
+        menus,
+        menusChaves,
         accessToken: token,
         userAbilities: [
           { action: 'manage', subject: 'all' }
