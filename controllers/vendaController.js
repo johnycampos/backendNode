@@ -118,6 +118,15 @@ class VendaController {
 
       const { data_inicio, data_fim } = req.query;
 
+      const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+      if (data_inicio && (!DATE_REGEX.test(data_inicio) || isNaN(Date.parse(data_inicio)))) {
+        return res.status(400).json({ error: 'Formato de data_inicio inválido. Use o formato YYYY-MM-DD' });
+      }
+
+      if (data_fim && (!DATE_REGEX.test(data_fim) || isNaN(Date.parse(data_fim)))) {
+        return res.status(400).json({ error: 'Formato de data_fim inválido. Use o formato YYYY-MM-DD' });
+      }
+
       const vendas = await Venda.listar({
         loja_id,
         data_inicio,

@@ -31,6 +31,7 @@ app.use('/api/vendas', require('./routes/vendaRoutes'));
 app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/menus', require('./routes/menus'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/audit-log', require('./routes/auditLogRoutes'));
 
 // Start server
 const PORT = process.env.PORT || 5000;
