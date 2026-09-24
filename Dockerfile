@@ -6,11 +6,14 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copiar código-fonte
-COPY . .
+# Copiar código-fonte e definir propriedade para o usuário node
+COPY --chown=node:node . .
 
 # Garantir permissão de execução no entrypoint
 RUN chmod +x entrypoint.sh
+
+# Executar aplicação como usuário não-root por segurança
+USER node
 
 EXPOSE 5000
 
