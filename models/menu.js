@@ -44,29 +44,49 @@ class Menu {
   }
 
   /**
-   * Atualiza as permissões de menu de um usuário de forma atômica/transacional.
+   * Atualiza as permissões de menu de um usuário de forma atômica/transacional com validação prévia.
    * @param {number} usuarioId ID do usuário alvo
    * @param {Array<number>} menuIds Lista de IDs dos menus que devem ficar habilitados
    */
   static async setDefinicao(usuarioId, menuIds = []) {
+    // 1. Validação prévia de existência do usuário
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [usuarioId]);
+    if (userCheck.rows.length === 0) {
+      const err = new Error('Usuário não encontrado');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // 2. Validação prévia dos IDs de menus informados
+    const ids = Array.isArray(menuIds)
+      ? [...new Set(menuIds.map(id => parseInt(id, 10)).filter(id => !isNaN(id)))]
+      : [];
+
+    if (ids.length > 0) {
+      const menusCheck = await pool.query('SELECT id FROM menus WHERE id = ANY($1::int[])', [ids]);
+      if (menusCheck.rows.length !== ids.length) {
+        const err = new Error('Um ou mais menus informados são inválidos ou inexistentes');
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+
+    // 3. Execução atômica da atualização
     const client = await pool.connect();
 
     try {
       await client.query('BEGIN');
 
-      // Limpa permissões existentes do usuário
+      // Remove permissões anteriores do usuário
       await client.query('DELETE FROM usuario_menus WHERE usuario_id = $1', [usuarioId]);
 
-      // Insere as novas habilitações
-      if (Array.isArray(menuIds) && menuIds.length > 0) {
-        for (const menuId of menuIds) {
-          const insertQuery = `
-            INSERT INTO usuario_menus (usuario_id, menu_id, habilitado)
-            VALUES ($1, $2, true)
-            ON CONFLICT (usuario_id, menu_id) DO UPDATE SET habilitado = true
-          `;
-          await client.query(insertQuery, [usuarioId, menuId]);
-        }
+      // Insere as novas permissões habilitadas
+      for (const menuId of ids) {
+        const insertQuery = `
+          INSERT INTO usuario_menus (usuario_id, menu_id, habilitado)
+          VALUES ($1, $2, true)
+        `;
+        await client.query(insertQuery, [usuarioId, menuId]);
       }
 
       await client.query('COMMIT');
