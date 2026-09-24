@@ -127,6 +127,11 @@ router.post('/login', async (req, res) => {
     const user = await Usuario.buscarPorUsername(username);
     if (!user) return res.status(400).json({ message: 'Login inválido' });
 
+    // Verifica se o usuário está ativo
+    if (user.ativo === false) {
+      return res.status(403).json({ message: 'Usuário desativado' });
+    }
+
     // Verifica a senha
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Senha errada' });

@@ -28,6 +28,8 @@ app.use('/api/unidades', require('./routes/unidades'));
 app.use('/api/locais-estoque', require('./routes/locaisEstoque'));
 app.use('/api/itens', require('./routes/itemRoutes'));
 app.use('/api/vendas', require('./routes/vendaRoutes'));
+app.use('/api/usuarios', require('./routes/usuarios'));
+app.use('/api/menus', require('./routes/menus'));
 
 // Start server
 const PORT = process.env.PORT || 5000;
