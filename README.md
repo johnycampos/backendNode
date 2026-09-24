@@ -28,10 +28,15 @@ O sistema suporta operação multi-loja centralizada:
 - `admin_loja`: Gerente de uma loja específica, com acesso aos dados e configurações da sua respectiva loja.
 - `funcionario`: Colaborador operacional com permissões delimitadas e restrições de horários e menus.
 
-## Autenticação
+## Autenticação & Horários Permitidos
 
 - O header de autorização espera o padrão `Authorization: Bearer <token>`.
 - O payload do JWT inclui `id`, `username`, `role` e `loja_id`.
+- **Restrição de Horário de Expediente (`funcionario`)**:
+  - Usuários com papel `funcionario` só conseguem efetuar login dentro dos intervalos cadastrados em `horarios_permitidos` (`dia_semana` de 0 a 6, `hora_inicio`, `hora_fim`).
+  - Se o funcionário não possuir horários cadastrados ou tentar logar fora do expediente, o login é recusado com status `403 Forbidden` (**fail-closed**).
+  - Usuários `admin_loja` e `super_admin` são isentos dessa restrição e possuem acesso irrestrito.
+  - **Nota de Fuso Horário**: A validação de dia da semana e hora atual é realizada com base no fuso horário do servidor (**Node runtime**). Esta é uma limitação conhecida da arquitetura atual, devendo ser revisitada caso as filiais operem em fusos horários distintos.
 
 ## Banco de Dados & Migrations
 

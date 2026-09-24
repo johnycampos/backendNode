@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const Usuario = require('../models/usuario');
 const Loja = require('../models/loja');
 const Menu = require('../models/menu');
+const HorarioPermitido = require('../models/horarioPermitido');
 const authMiddleware = require('../middleware/auth');
 
 // Listar lojas ativas (para seleção em login/cadastro ou contexto)
@@ -129,6 +130,16 @@ router.post('/login', async (req, res) => {
     // Verifica a senha
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Senha errada' });
+
+    // Restrição de horário de expediente para funcionários (super_admin e admin_loja são isentos)
+    if (user.role === 'funcionario') {
+      const acessoHorario = await HorarioPermitido.podeLogarAgora(user.id);
+      if (!acessoHorario.permitido) {
+        return res.status(403).json({ 
+          message: acessoHorario.motivo || 'Fora do horário permitido para login' 
+        });
+      }
+    }
 
     // Busca os menus habilitados para o usuário logado
     const menus = await Menu.listarHabilitadosPorUsuario(user.id);
