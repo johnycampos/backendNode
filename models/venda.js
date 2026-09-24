@@ -61,8 +61,8 @@ class Venda {
 
         await client.query(itemVendaQuery, itemVendaValues);
 
-        // Atualizar o estoque usando o método do modelo Item
-        await Item.atualizarEstoque(item.item_id, -item.quantidade);
+        // Atualizar o estoque usando o método do modelo Item (respeitando a loja se fornecida)
+        await Item.atualizarEstoque(item.item_id, -item.quantidade, vendaData.loja_id);
       }
 
       await client.query('COMMIT');
@@ -76,9 +76,11 @@ class Venda {
     }
   }
 
-  static async buscarPorId(id) {
-    const query = `
+  static async buscarPorId(id, loja_id = null) {
+    let query = `
       SELECT v.*, 
+             lj.nome as loja_nome,
+             u.username as vendedor_nome,
              json_agg(json_build_object(
                'id', iv.id,
                'item_id', iv.item_id,
@@ -88,16 +90,30 @@ class Venda {
              )) as itens
       FROM vendas v
       LEFT JOIN itens_venda iv ON v.id = iv.venda_id
+      LEFT JOIN lojas lj ON v.loja_id = lj.id
+      LEFT JOIN users u ON v.vendedor_id = u.id
       WHERE v.id = $1
-      GROUP BY v.id
     `;
-    const result = await pool.query(query, [id]);
+    const values = [id];
+
+    if (loja_id) {
+      query += ` AND v.loja_id = $2`;
+      values.push(loja_id);
+    }
+
+    query += `
+      GROUP BY v.id, lj.nome, u.username
+    `;
+
+    const result = await pool.query(query, values);
     return result.rows[0];
   }
 
-  static async listar() {
-    const query = `
+  static async listar(loja_id = null) {
+    let query = `
       SELECT v.*, 
+             lj.nome as loja_nome,
+             u.username as vendedor_nome,
              json_agg(json_build_object(
                'id', iv.id,
                'item_id', iv.item_id,
@@ -107,12 +123,23 @@ class Venda {
              )) as itens
       FROM vendas v
       LEFT JOIN itens_venda iv ON v.id = iv.venda_id
-      GROUP BY v.id
+      LEFT JOIN lojas lj ON v.loja_id = lj.id
+      LEFT JOIN users u ON v.vendedor_id = u.id
+    `;
+    const values = [];
+
+    if (loja_id) {
+      query += ` WHERE v.loja_id = $1`;
+      values.push(loja_id);
+    }
+
+    query += `
+      GROUP BY v.id, lj.nome, u.username
       ORDER BY v.data_venda DESC
     `;
-    const result = await pool.query(query);
+    const result = await pool.query(query, values);
     return result.rows;
   }
 }
 
-module.exports = Venda; 
+module.exports = Venda;

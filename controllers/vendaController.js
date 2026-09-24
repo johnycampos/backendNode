@@ -11,8 +11,19 @@ class VendaController {
         return res.status(400).json({ error: 'A venda deve conter pelo menos um item' });
       }
 
+      // Atribuir loja_id e vendedor_id a partir do contexto autenticado se não informados
+      if (!vendaData.loja_id) {
+        vendaData.loja_id = (req.role === 'super_admin' && req.body.loja_id)
+          ? req.body.loja_id
+          : req.lojaId;
+      }
+
       if (!vendaData.loja_id) {
         return res.status(400).json({ error: 'ID da loja é obrigatório' });
+      }
+
+      if (!vendaData.vendedor_id) {
+        vendaData.vendedor_id = req.userId;
       }
 
       if (!vendaData.forma_pagamento) {
@@ -27,20 +38,20 @@ class VendaController {
         return res.status(400).json({ error: 'Valor total é obrigatório' });
       }
 
-      // Verificar se todos os itens existem
+      // Verificar se todos os itens existem na loja da venda
       for (const item of vendaData.itens) {
-        const itemExiste = await Item.buscarPorId(item.item_id);
+        const itemExiste = await Item.buscarPorId(item.item_id, vendaData.loja_id);
         if (!itemExiste) {
           return res.status(400).json({ 
-            error: `Item com ID ${item.item_id} não encontrado`,
+            error: `Item com ID ${item.item_id} não encontrado na loja`,
             item_id: item.item_id
           });
         }
 
         // Verificar se há estoque suficiente
-        if (itemExiste.quantidade_disponivel < item.quantidade) {
+        if (Number(itemExiste.quantidade_disponivel) < Number(item.quantidade)) {
           return res.status(400).json({ 
-            error: `Estoque insuficiente para o item ${item.item_id}`,
+            error: `Estoque insuficiente para o item ${itemExiste.nome}`,
             item_id: item.item_id,
             quantidade_solicitada: item.quantidade,
             quantidade_disponivel: itemExiste.quantidade_disponivel
@@ -72,7 +83,8 @@ class VendaController {
 
   static async buscarPorId(req, res) {
     try {
-      const venda = await Venda.buscarPorId(req.params.id);
+      const loja_id = req.role === 'super_admin' ? null : req.lojaId;
+      const venda = await Venda.buscarPorId(req.params.id, loja_id);
       if (!venda) {
         return res.status(404).json({ error: 'Venda não encontrada' });
       }
@@ -85,7 +97,11 @@ class VendaController {
 
   static async listar(req, res) {
     try {
-      const vendas = await Venda.listar();
+      const loja_id = req.role === 'super_admin'
+        ? (req.query.loja_id ? parseInt(req.query.loja_id, 10) : null)
+        : req.lojaId;
+
+      const vendas = await Venda.listar(loja_id);
       res.json(vendas);
     } catch (error) {
       console.error('Erro ao listar vendas:', error);
@@ -94,4 +110,4 @@ class VendaController {
   }
 }
 
-module.exports = VendaController; 
+module.exports = VendaController;

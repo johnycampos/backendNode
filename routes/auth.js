@@ -2,17 +2,52 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../db'); // Importa o pool do arquivo db.js
+const Usuario = require('../models/usuario');
+const Loja = require('../models/loja');
+
+// Listar lojas ativas (para seleção em login/cadastro ou contexto)
+router.get('/lojas', async (req, res) => {
+  try {
+    const lojas = await Loja.listar();
+    res.json(lojas);
+  } catch (err) {
+    console.error('Erro ao listar lojas:', err.message);
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+});
 
 // Registro
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, role } = req.body;
+    let { username, password, role, loja_id } = req.body;
 
-    // Verifica se o usuário existe
-    const userExists = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    if (userExists.rows.length > 0) {
-      console.log('Usuário já existe');
+    if (!username || !password) {
+      return res.status(400).json({ 
+        message: 'Dados inválidos',
+        errors: {
+          username: !username ? 'Username é obrigatório' : null,
+          password: !password ? 'Password é obrigatório' : null
+        }
+      });
+    }
+
+    // Se loja_id não fornecido, vincula à matriz por default
+    if (!loja_id) {
+      const matriz = await Loja.buscarMatriz();
+      loja_id = matriz ? matriz.id : 1;
+    } else {
+      const lojaExiste = await Loja.buscarPorId(loja_id);
+      if (!lojaExiste) {
+        return res.status(400).json({ message: 'Loja informada não existe' });
+      }
+    }
+
+    // Default de papel é funcionario se não fornecido
+    role = role || 'funcionario';
+
+    // Verifica se o usuário já existe
+    const userExists = await Usuario.buscarPorUsername(username);
+    if (userExists) {
       return res.status(400).json({ message: 'Usuário já existe' });
     }
 
@@ -20,12 +55,20 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insere usuário no banco de dados
-    await pool.query('INSERT INTO users (username, password, role) VALUES ($1, $2 ,$3)', [username, hashedPassword, role]);
+    const novoUsuario = await Usuario.criar({
+      username,
+      password: hashedPassword,
+      role,
+      loja_id
+    });
 
-    res.status(201).json({ message: 'Usuário registrado com sucesso' });
+    res.status(201).json({ 
+      message: 'Usuário registrado com sucesso',
+      user: novoUsuario
+    });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Erro no servidor');
+    console.error('Erro no registro:', err.message);
+    res.status(500).json({ message: 'Erro no servidor' });
   }
 });
 
@@ -46,17 +89,24 @@ router.post('/login', async (req, res) => {
     }
 
     // Verifica se o usuário existe
-    const user = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    if (user.rows.length === 0) return res.status(400).json({ message: 'Login inválido' });
+    const user = await Usuario.buscarPorUsername(username);
+    if (!user) return res.status(400).json({ message: 'Login inválido' });
 
     // Verifica a senha
-    const isMatch = await bcrypt.compare(password, user.rows[0].password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Senha errada' });
 
-    // Gera token 
+    // Gera token com loja_id e role incluídos no payload
     const payload = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      loja_id: user.loja_id,
       user: {
-        id: user.rows[0].id
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        loja_id: user.loja_id
       },
       autenticado: true
     };
@@ -66,22 +116,24 @@ router.post('/login', async (req, res) => {
       
       res.json({
         userData: {
-          id: user.rows[0].id,
-          fullName: user.rows[0].username,
-          username: 'johndoe',
+          id: user.id,
+          fullName: user.username,
+          username: user.username,
           avatar: '/src/assets/images/avatars/avatar-1.png',
-          email: 'admin@demo.com',
-          role: user.rows[0].role,
+          email: `${user.username}@realrevision.com`,
+          role: user.role,
+          loja_id: user.loja_id,
+          loja_nome: user.loja_nome
         },
         accessToken: token,
         userAbilities: [
-          {action: 'manage', subject: 'all'}
+          { action: 'manage', subject: 'all' }
         ]
       });
     });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Erro no servidor');
+    console.error('Erro no login:', err.message);
+    res.status(500).json({ message: 'Erro no servidor' });
   }
 });
 

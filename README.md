@@ -12,6 +12,27 @@ DATABASE_URL=postgresql://usuario:senha@localhost:5432/nome_do_banco
 JWT_SECRET=seu_segredo_jwt
 ```
 
+## Arquitetura Multi-Loja (Tenant)
+
+O sistema suporta operação multi-loja centralizada:
+- **Lojas cadastradas**:
+  - `Real Revision` (Matriz — `is_matriz = true`)
+  - `Nitori` (Filial — `is_matriz = false`)
+  - `Baby Real Revision` (Filial — `is_matriz = false`)
+- **Tabelas com tenant (`loja_id`)**: `users`, `itens`, `locais_estoque`, `vendas`.
+- **Catálogo Global Compartilhado**: `fabricantes`, `grupos`, `subgrupos` e `unidades` são globais e compartilhados entre todas as lojas do ecossistema para manter a taxonomia uniforme.
+
+### Papéis de Usuário (`users.role`)
+
+- `super_admin`: Acesso à matriz com visão consolidada de todas as lojas, sem filtros forçados.
+- `admin_loja`: Gerente de uma loja específica, com acesso aos dados e configurações da sua respectiva loja.
+- `funcionario`: Colaborador operacional com permissões delimitadas e restrições de horários e menus.
+
+## Autenticação
+
+- O header de autorização espera o padrão `Authorization: Bearer <token>`.
+- O payload do JWT inclui `id`, `username`, `role` e `loja_id`.
+
 ## Banco de Dados & Migrations
 
 O banco de dados utiliza versionamento de schema com `node-pg-migrate`. Todas as alterações estruturais de tabelas devem ser gerenciadas via migrations.
