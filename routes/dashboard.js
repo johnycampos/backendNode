@@ -24,21 +24,23 @@ router.get('/resumo', async (req, res) => {
       filtroLojaId = parseInt(req.query.loja_id, 10);
     }
 
-    // 1. Métricas de vendas (Geral ou por loja)
+    // 1. Métricas de vendas (Geral ou por loja) - filtra apenas lojas ativas
     let vendasQuery = `
       SELECT
-        COALESCE(SUM(CASE WHEN data_venda >= CURRENT_DATE THEN valor_total ELSE 0 END), 0) AS total_hoje,
-        COUNT(CASE WHEN data_venda >= CURRENT_DATE THEN 1 ELSE NULL END) AS qtd_hoje,
-        COALESCE(SUM(CASE WHEN data_venda >= DATE_TRUNC('week', CURRENT_TIMESTAMP) THEN valor_total ELSE 0 END), 0) AS total_semana,
-        COUNT(CASE WHEN data_venda >= DATE_TRUNC('week', CURRENT_TIMESTAMP) THEN 1 ELSE NULL END) AS qtd_semana,
-        COALESCE(SUM(CASE WHEN data_venda >= DATE_TRUNC('month', CURRENT_TIMESTAMP) THEN valor_total ELSE 0 END), 0) AS total_mes,
-        COUNT(CASE WHEN data_venda >= DATE_TRUNC('month', CURRENT_TIMESTAMP) THEN 1 ELSE NULL END) AS qtd_mes
-      FROM vendas
+        COALESCE(SUM(CASE WHEN v.data_venda >= CURRENT_DATE THEN v.valor_total ELSE 0 END), 0) AS total_hoje,
+        COUNT(CASE WHEN v.data_venda >= CURRENT_DATE THEN 1 ELSE NULL END) AS qtd_hoje,
+        COALESCE(SUM(CASE WHEN v.data_venda >= DATE_TRUNC('week', CURRENT_TIMESTAMP) THEN v.valor_total ELSE 0 END), 0) AS total_semana,
+        COUNT(CASE WHEN v.data_venda >= DATE_TRUNC('week', CURRENT_TIMESTAMP) THEN 1 ELSE NULL END) AS qtd_semana,
+        COALESCE(SUM(CASE WHEN v.data_venda >= DATE_TRUNC('month', CURRENT_TIMESTAMP) THEN v.valor_total ELSE 0 END), 0) AS total_mes,
+        COUNT(CASE WHEN v.data_venda >= DATE_TRUNC('month', CURRENT_TIMESTAMP) THEN 1 ELSE NULL END) AS qtd_mes
+      FROM vendas v
+      INNER JOIN lojas l ON v.loja_id = l.id
+      WHERE l.ativo = true
     `;
     const vendasParams = [];
 
     if (filtroLojaId) {
-      vendasQuery += ` WHERE loja_id = $1`;
+      vendasQuery += ` AND v.loja_id = $1`;
       vendasParams.push(filtroLojaId);
     }
 
@@ -54,7 +56,7 @@ router.get('/resumo', async (req, res) => {
     const ticketMedioHoje = qtdHoje > 0 ? parseFloat((totalHoje / qtdHoje).toFixed(2)) : 0;
     const ticketMedioMes = qtdMes > 0 ? parseFloat((totalMes / qtdMes).toFixed(2)) : 0;
 
-    // 2. Itens com estoque baixo
+    // 2. Itens com estoque baixo (apenas lojas ativas)
     let estoqueQuery = `
       SELECT 
         i.id,
@@ -64,8 +66,8 @@ router.get('/resumo', async (req, res) => {
         i.loja_id,
         l.nome AS loja_nome
       FROM itens i
-      LEFT JOIN lojas l ON i.loja_id = l.id
-      WHERE i.quantidade_disponivel <= i.quantidade_minima
+      INNER JOIN lojas l ON i.loja_id = l.id
+      WHERE l.ativo = true AND i.quantidade_disponivel <= i.quantidade_minima
     `;
     const estoqueParams = [];
 
@@ -81,11 +83,12 @@ router.get('/resumo', async (req, res) => {
 
     const { rows: itensEstoqueBaixo } = await pool.query(estoqueQuery, estoqueParams);
 
-    // Contagem total de itens em alerta
+    // Contagem total de itens em alerta (apenas lojas ativas)
     let countEstoqueQuery = `
       SELECT COUNT(*) AS total
       FROM itens i
-      WHERE i.quantidade_disponivel <= i.quantidade_minima
+      INNER JOIN lojas l ON i.loja_id = l.id
+      WHERE l.ativo = true AND i.quantidade_disponivel <= i.quantidade_minima
     `;
     if (filtroLojaId) {
       countEstoqueQuery += ` AND i.loja_id = $1`;
