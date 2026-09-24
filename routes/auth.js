@@ -19,7 +19,7 @@ router.get('/lojas', async (req, res) => {
 // Registro
 router.post('/register', async (req, res) => {
   try {
-    let { username, password, role, loja_id } = req.body;
+    let { username, password, loja_id } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ 
