@@ -12,6 +12,8 @@ const apenasAdmin = require('../middleware/apenasAdmin');
 router.use(authMiddleware);
 router.use(apenasAdmin);
 
+const ROLES_VALIDOS = ['funcionario', 'admin_loja', 'super_admin'];
+
 // Listar usuários
 router.get('/', async (req, res) => {
   try {
@@ -70,6 +72,10 @@ router.post('/', async (req, res) => {
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username e senha são obrigatórios' });
+    }
+
+    if (role && !ROLES_VALIDOS.includes(role)) {
+      return res.status(400).json({ error: `Papel (role) inválido. Permitidos: ${ROLES_VALIDOS.join(', ')}` });
     }
 
     // Validações e restrições por papel
@@ -138,6 +144,10 @@ router.put('/:id', async (req, res) => {
     const usuarioAlvo = await Usuario.buscarPorId(req.params.id);
     if (!usuarioAlvo) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    if (req.body.role !== undefined && !ROLES_VALIDOS.includes(req.body.role)) {
+      return res.status(400).json({ error: `Papel (role) inválido. Permitidos: ${ROLES_VALIDOS.join(', ')}` });
     }
 
     // Restrições para admin_loja
@@ -220,8 +230,13 @@ router.put('/:id/menus', async (req, res) => {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
-    if (req.role === 'admin_loja' && usuario.loja_id !== req.lojaId) {
-      return res.status(403).json({ error: 'Acesso negado para alterar menus deste usuário' });
+    if (req.role === 'admin_loja') {
+      if (usuario.loja_id !== req.lojaId) {
+        return res.status(403).json({ error: 'Você não tem permissão para alterar menus de usuários de outra loja' });
+      }
+      if (usuario.role === 'super_admin') {
+        return res.status(403).json({ error: 'Você não tem permissão para alterar menus de um super_admin' });
+      }
     }
 
     const { menus } = req.body;
@@ -262,8 +277,13 @@ router.put('/:id/horarios', async (req, res) => {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
-    if (req.role === 'admin_loja' && usuario.loja_id !== req.lojaId) {
-      return res.status(403).json({ error: 'Acesso negado para alterar horários deste usuário' });
+    if (req.role === 'admin_loja') {
+      if (usuario.loja_id !== req.lojaId) {
+        return res.status(403).json({ error: 'Você não tem permissão para alterar horários de usuários de outra loja' });
+      }
+      if (usuario.role === 'super_admin') {
+        return res.status(403).json({ error: 'Você não tem permissão para alterar horários de um super_admin' });
+      }
     }
 
     const { horarios } = req.body;
