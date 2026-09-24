@@ -1,7 +1,5 @@
 const express = require('express');
-const cors = require('cors'); // Importe o cors
-const { Pool } = require('pg');
-const { createUsersTable, createFabricantesTable, createGruposTable, createSubgruposTable, createUnidadesTable, createLocaisEstoqueTable, createItensTable } = require('./db');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
@@ -11,23 +9,6 @@ app.use(express.json());
 
 // Configuração do CORS
 app.use(cors());
-
-// PostgreSQL Pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
-// Verifica e cria tabelas no início
-createUsersTable();
-createFabricantesTable();
-createGruposTable();
-createSubgruposTable();
-createUnidadesTable();
-createLocaisEstoqueTable();
-createItensTable();
 
 // Rota de teste
 app.get('/api/test', (req, res) => {
