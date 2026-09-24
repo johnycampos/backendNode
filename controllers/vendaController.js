@@ -1,6 +1,7 @@
 const Venda = require('../models/venda');
 const Item = require('../models/item');
 const Loja = require('../models/loja');
+const AuditLog = require('../models/auditLog');
 
 class VendaController {
   static async criar(req, res) {
@@ -80,6 +81,14 @@ class VendaController {
       }
 
       const venda = await Venda.criar(vendaData);
+
+      // Auditoria (fire-and-forget)
+      AuditLog.registrar(req.userId, venda.loja_id, 'criar_venda', 'vendas', venda.id, {
+        valor_total: venda.valor_total,
+        forma_pagamento: venda.forma_pagamento,
+        itens_qtd: vendaData.itens.length
+      });
+
       res.status(201).json(venda);
     } catch (error) {
       console.error('Erro ao criar venda:', error);
@@ -107,7 +116,13 @@ class VendaController {
         ? (req.query.loja_id ? parseInt(req.query.loja_id, 10) : null)
         : req.lojaId;
 
-      const vendas = await Venda.listar(loja_id);
+      const { data_inicio, data_fim } = req.query;
+
+      const vendas = await Venda.listar({
+        loja_id,
+        data_inicio,
+        data_fim
+      });
       res.json(vendas);
     } catch (error) {
       console.error('Erro ao listar vendas:', error);

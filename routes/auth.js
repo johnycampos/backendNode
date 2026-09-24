@@ -2,11 +2,24 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const Usuario = require('../models/usuario');
 const Loja = require('../models/loja');
 const Menu = require('../models/menu');
 const HorarioPermitido = require('../models/horarioPermitido');
+const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
+
+// Limitador de tentativas de login contra ataques de força bruta (5 tentativas por 15 min)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: 'Muitas tentativas de login a partir deste IP. Tente novamente após 15 minutos.'
+  }
+});
 
 // Listar lojas ativas (para seleção em login/cadastro ou contexto)
 router.get('/lojas', async (req, res) => {
@@ -108,7 +121,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -168,6 +181,13 @@ router.post('/login', async (req, res) => {
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
       if (err) throw err;
       
+      // Registro de auditoria do login (fire-and-forget)
+      AuditLog.registrar(user.id, user.loja_id, 'login', 'users', user.id, {
+        username: user.username,
+        role: user.role,
+        ip: req.ip || req.connection?.remoteAddress
+      });
+
       res.json({
         userData: {
           id: user.id,

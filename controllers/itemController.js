@@ -1,5 +1,6 @@
 const Item = require('../models/item');
 const Loja = require('../models/loja');
+const AuditLog = require('../models/auditLog');
 
 class ItemController {
   static async criar(req, res) {
@@ -115,6 +116,14 @@ class ItemController {
       if (!item) {
         return res.status(404).json({ error: 'Item não encontrado' });
       }
+
+      // Auditoria (fire-and-forget)
+      AuditLog.registrar(req.userId, item.loja_id, 'ajuste_estoque', 'itens', item.id, {
+        operacao,
+        quantidade,
+        nova_quantidade: item.quantidade_disponivel
+      });
+
       res.json(item);
     } catch (error) {
       console.error('Erro ao atualizar estoque:', error);

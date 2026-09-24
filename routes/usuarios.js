@@ -5,6 +5,7 @@ const Usuario = require('../models/usuario');
 const Loja = require('../models/loja');
 const Menu = require('../models/menu');
 const HorarioPermitido = require('../models/horarioPermitido');
+const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
 const apenasAdmin = require('../middleware/apenasAdmin');
 
@@ -127,6 +128,13 @@ router.post('/', async (req, res) => {
     if (Array.isArray(horarios) && horarios.length > 0) {
       await HorarioPermitido.definirParaUsuario(novoUsuario.id, horarios);
     }
+
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, novoUsuario.loja_id, 'criar_usuario', 'users', novoUsuario.id, {
+      username: novoUsuario.username,
+      role: novoUsuario.role,
+      ativo: novoUsuario.ativo
+    });
 
     res.status(201).json({
       message: 'Usuário cadastrado com sucesso',

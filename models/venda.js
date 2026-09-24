@@ -109,7 +109,21 @@ class Venda {
     return result.rows[0];
   }
 
-  static async listar(loja_id = null) {
+  static async listar(filtroOuLojaId = null, dataInicioParam = null, dataFimParam = null) {
+    let loja_id = null;
+    let data_inicio = null;
+    let data_fim = null;
+
+    if (typeof filtroOuLojaId === 'object' && filtroOuLojaId !== null) {
+      loja_id = filtroOuLojaId.loja_id || null;
+      data_inicio = filtroOuLojaId.data_inicio || null;
+      data_fim = filtroOuLojaId.data_fim || null;
+    } else {
+      loja_id = filtroOuLojaId;
+      data_inicio = dataInicioParam;
+      data_fim = dataFimParam;
+    }
+
     let query = `
       SELECT v.*, 
              lj.nome as loja_nome,
@@ -125,12 +139,24 @@ class Venda {
       LEFT JOIN itens_venda iv ON v.id = iv.venda_id
       LEFT JOIN lojas lj ON v.loja_id = lj.id
       LEFT JOIN users u ON v.vendedor_id = u.id
+      WHERE 1=1
     `;
     const values = [];
+    let paramIndex = 1;
 
     if (loja_id) {
-      query += ` WHERE v.loja_id = $1`;
+      query += ` AND v.loja_id = $${paramIndex++}`;
       values.push(loja_id);
+    }
+
+    if (data_inicio) {
+      query += ` AND v.data_venda >= $${paramIndex++}::timestamp`;
+      values.push(data_inicio);
+    }
+
+    if (data_fim) {
+      query += ` AND v.data_venda <= ($${paramIndex++}::date + INTERVAL '1 day')`;
+      values.push(data_fim);
     }
 
     query += `
