@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const LocalEstoque = require('../models/localEstoque');
 const Loja = require('../models/loja');
+const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
 
 // Todas as rotas de locais de estoque requerem autenticação
@@ -66,6 +67,11 @@ router.post('/', async (req, res) => {
       loja_id
     });
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, novoLocal.loja_id, 'criar_local_estoque', 'locais_estoque', novoLocal.id, {
+      nome: novoLocal.nome
+    });
+
     res.status(201).json(novoLocal);
   } catch (err) {
     console.error('Erro ao criar local de estoque:', err.message);
@@ -93,6 +99,11 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Local de estoque não encontrado' });
     }
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, localAtualizado.loja_id, 'atualizar_local_estoque', 'locais_estoque', localAtualizado.id, {
+      nome: localAtualizado.nome
+    });
+
     res.json(localAtualizado);
   } catch (err) {
     console.error('Erro ao atualizar local de estoque:', err.message);
@@ -108,6 +119,12 @@ router.delete('/:id', async (req, res) => {
     if (!localDeletado) {
       return res.status(404).json({ message: 'Local de estoque não encontrado' });
     }
+
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, localDeletado.loja_id, 'deletar_local_estoque', 'locais_estoque', localDeletado.id, {
+      nome: localDeletado.nome
+    });
+
     res.json({ message: 'Local de estoque deletado com sucesso' });
   } catch (err) {
     console.error('Erro ao deletar local de estoque:', err.message);

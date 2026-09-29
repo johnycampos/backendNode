@@ -22,6 +22,14 @@ class ItemController {
         ...req.body,
         loja_id
       });
+
+      // Auditoria (fire-and-forget)
+      AuditLog.registrar(req.userId, item.loja_id, 'criar_item', 'itens', item.id, {
+        codigo: item.codigo,
+        nome: item.nome,
+        quantidade_disponivel: item.quantidade_disponivel
+      });
+
       res.status(201).json(item);
     } catch (error) {
       console.error('Erro ao criar item:', error);
@@ -80,6 +88,15 @@ class ItemController {
       if (!item) {
         return res.status(404).json({ error: 'Item não encontrado' });
       }
+
+      // Auditoria (fire-and-forget)
+      AuditLog.registrar(req.userId, item.loja_id, 'atualizar_item', 'itens', item.id, {
+        codigo: item.codigo,
+        nome: item.nome,
+        quantidade_disponivel: item.quantidade_disponivel,
+        valor: item.valor
+      });
+
       res.json(item);
     } catch (error) {
       console.error('Erro ao atualizar item:', error);
@@ -94,6 +111,13 @@ class ItemController {
       if (!item) {
         return res.status(404).json({ error: 'Item não encontrado' });
       }
+
+      // Auditoria (fire-and-forget)
+      AuditLog.registrar(req.userId, item.loja_id || req.lojaId, 'deletar_item', 'itens', item.id, {
+        codigo: item.codigo,
+        nome: item.nome
+      });
+
       res.json({ message: 'Item deletado com sucesso' });
     } catch (error) {
       console.error('Erro ao deletar item:', error);

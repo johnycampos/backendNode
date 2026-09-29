@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Fabricante = require('../models/fabricante');
+const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
 
 // Todas as rotas de fabricantes requerem autenticação
@@ -50,6 +51,12 @@ router.post('/', async (req, res) => {
       observacoes
     });
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'criar_fabricante', 'fabricantes', novoFabricante.id, {
+      nome: novoFabricante.nome,
+      cnpj: novoFabricante.cnpj
+    });
+
     res.status(201).json(novoFabricante);
   } catch (err) {
     console.error(err.message);
@@ -80,6 +87,11 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Fabricante não encontrado' });
     }
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'atualizar_fabricante', 'fabricantes', fabricanteAtualizado.id, {
+      nome: fabricanteAtualizado.nome
+    });
+
     res.json(fabricanteAtualizado);
   } catch (err) {
     console.error(err.message);
@@ -94,6 +106,12 @@ router.delete('/:id', async (req, res) => {
     if (!fabricanteDeletado) {
       return res.status(404).json({ message: 'Fabricante não encontrado' });
     }
+
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'deletar_fabricante', 'fabricantes', fabricanteDeletado.id, {
+      nome: fabricanteDeletado.nome
+    });
+
     res.json({ message: 'Fabricante deletado com sucesso' });
   } catch (err) {
     console.error(err.message);

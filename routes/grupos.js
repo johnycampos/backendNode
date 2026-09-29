@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Grupo = require('../models/grupo');
+const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
 
 // Todas as rotas de grupos requerem autenticação
@@ -46,6 +47,11 @@ router.post('/', async (req, res) => {
       descricao
     });
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'criar_grupo', 'grupos', novoGrupo.id, {
+      nome: novoGrupo.nome
+    });
+
     res.status(201).json(novoGrupo);
   } catch (err) {
     console.error(err.message);
@@ -72,6 +78,11 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Grupo não encontrado' });
     }
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'atualizar_grupo', 'grupos', grupoAtualizado.id, {
+      nome: grupoAtualizado.nome
+    });
+
     res.json(grupoAtualizado);
   } catch (err) {
     console.error(err.message);
@@ -86,6 +97,12 @@ router.delete('/:id', async (req, res) => {
     if (!grupoDeletado) {
       return res.status(404).json({ message: 'Grupo não encontrado' });
     }
+
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'deletar_grupo', 'grupos', grupoDeletado.id, {
+      nome: grupoDeletado.nome
+    });
+
     res.json({ message: 'Grupo deletado com sucesso' });
   } catch (err) {
     console.error(err.message);

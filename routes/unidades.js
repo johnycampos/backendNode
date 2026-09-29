@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Unidade = require('../models/unidade');
+const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
 
 // Todas as rotas de unidades requerem autenticação
@@ -47,6 +48,12 @@ router.post('/', async (req, res) => {
       descricao
     });
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'criar_unidade', 'unidades', novaUnidade.id, {
+      nome: novaUnidade.nome,
+      sigla: novaUnidade.sigla
+    });
+
     res.status(201).json(novaUnidade);
   } catch (err) {
     console.error(err.message);
@@ -74,6 +81,12 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Unidade não encontrada' });
     }
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'atualizar_unidade', 'unidades', unidadeAtualizada.id, {
+      nome: unidadeAtualizada.nome,
+      sigla: unidadeAtualizada.sigla
+    });
+
     res.json(unidadeAtualizada);
   } catch (err) {
     console.error(err.message);
@@ -88,6 +101,12 @@ router.delete('/:id', async (req, res) => {
     if (!unidadeDeletada) {
       return res.status(404).json({ message: 'Unidade não encontrada' });
     }
+
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'deletar_unidade', 'unidades', unidadeDeletada.id, {
+      nome: unidadeDeletada.nome
+    });
+
     res.json({ message: 'Unidade deletada com sucesso' });
   } catch (err) {
     console.error(err.message);

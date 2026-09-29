@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Subgrupo = require('../models/subgrupo');
+const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
 
 // Todas as rotas de subgrupos requerem autenticação
@@ -64,6 +65,12 @@ router.post('/', async (req, res) => {
       grupo_id
     });
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'criar_subgrupo', 'subgrupos', novoSubgrupo.id, {
+      nome: novoSubgrupo.nome,
+      grupo_id: novoSubgrupo.grupo_id
+    });
+
     res.status(201).json(novoSubgrupo);
   } catch (err) {
     console.error(err.message);
@@ -97,6 +104,12 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Subgrupo não encontrado' });
     }
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'atualizar_subgrupo', 'subgrupos', subgrupoAtualizado.id, {
+      nome: subgrupoAtualizado.nome,
+      grupo_id: subgrupoAtualizado.grupo_id
+    });
+
     res.json(subgrupoAtualizado);
   } catch (err) {
     console.error(err.message);
@@ -111,6 +124,12 @@ router.delete('/:id', async (req, res) => {
     if (!subgrupoDeletado) {
       return res.status(404).json({ message: 'Subgrupo não encontrado' });
     }
+
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, req.lojaId, 'deletar_subgrupo', 'subgrupos', subgrupoDeletado.id, {
+      nome: subgrupoDeletado.nome
+    });
+
     res.json({ message: 'Subgrupo deletado com sucesso' });
   } catch (err) {
     console.error(err.message);

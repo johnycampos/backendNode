@@ -200,6 +200,13 @@ router.put('/:id', async (req, res) => {
       await HorarioPermitido.definirParaUsuario(usuarioAlvo.id, req.body.horarios);
     }
 
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, usuarioAtualizado.loja_id, 'atualizar_usuario', 'users', usuarioAtualizado.id, {
+      username: usuarioAtualizado.username,
+      role: usuarioAtualizado.role,
+      ativo: usuarioAtualizado.ativo
+    });
+
     res.json({
       message: 'Usuário atualizado com sucesso',
       usuario: usuarioAtualizado
@@ -207,6 +214,42 @@ router.put('/:id', async (req, res) => {
   } catch (err) {
     console.error('Erro ao atualizar usuário:', err);
     res.status(err.statusCode || 500).json({ error: err.message || 'Erro ao atualizar usuário' });
+  }
+});
+
+// Deletar usuário
+router.delete('/:id', async (req, res) => {
+  try {
+    const usuarioAlvo = await Usuario.buscarPorId(req.params.id);
+    if (!usuarioAlvo) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    if (usuarioAlvo.id === req.userId) {
+      return res.status(400).json({ error: 'Não é permitido deletar o próprio usuário logado' });
+    }
+
+    if (req.role === 'admin_loja') {
+      if (usuarioAlvo.loja_id !== req.lojaId) {
+        return res.status(403).json({ error: 'Você não tem permissão para deletar usuários de outra loja' });
+      }
+      if (usuarioAlvo.role === 'super_admin') {
+        return res.status(403).json({ error: 'Você não tem permissão para deletar um super_admin' });
+      }
+    }
+
+    const deletado = await Usuario.deletar(usuarioAlvo.id);
+
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, usuarioAlvo.loja_id, 'deletar_usuario', 'users', usuarioAlvo.id, {
+      username: usuarioAlvo.username,
+      role: usuarioAlvo.role
+    });
+
+    res.json({ message: 'Usuário deletado com sucesso', usuario: deletado });
+  } catch (err) {
+    console.error('Erro ao deletar usuário:', err);
+    res.status(err.statusCode || 500).json({ error: err.message || 'Erro ao deletar usuário' });
   }
 });
 
@@ -249,6 +292,11 @@ router.put('/:id/menus', async (req, res) => {
 
     const { menus } = req.body;
     await Menu.setDefinicao(usuario.id, menus || []);
+
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, usuario.loja_id, 'atualizar_menus_usuario', 'users', usuario.id, {
+      menus: menus || []
+    });
 
     res.json({ message: 'Permissões de menu atualizadas com sucesso' });
   } catch (err) {
@@ -296,6 +344,11 @@ router.put('/:id/horarios', async (req, res) => {
 
     const { horarios } = req.body;
     await HorarioPermitido.definirParaUsuario(usuario.id, horarios || []);
+
+    // Auditoria (fire-and-forget)
+    AuditLog.registrar(req.userId, usuario.loja_id, 'atualizar_horarios_usuario', 'users', usuario.id, {
+      total_horarios: (horarios || []).length
+    });
 
     res.json({ message: 'Horários permitidos atualizados com sucesso' });
   } catch (err) {
