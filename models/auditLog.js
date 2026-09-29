@@ -63,7 +63,7 @@ class AuditLog {
   /**
    * Lista registros de auditoria com filtros opcionais
    */
-  static async listar({ lojaId = null, usuarioId = null, acao = null, limite = 50, offset = 0 } = {}) {
+  static async listar({ lojaId = null, usuarioId = null, acao = null, entidade = null, limite = 50, offset = 0 } = {}) {
     try {
       let query = `
         SELECT 
@@ -91,6 +91,11 @@ class AuditLog {
       if (acao) {
         query += ` AND a.acao = $${paramIndex++}`;
         values.push(acao);
+      }
+
+      if (entidade) {
+        query += ` AND a.entidade = $${paramIndex++}`;
+        values.push(entidade);
       }
 
       query += ` ORDER BY a.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;

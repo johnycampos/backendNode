@@ -2,27 +2,30 @@ const express = require('express');
 const router = express.Router();
 const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
-const apenasAdmin = require('../middleware/apenasAdmin');
+const apenasEstoquista = require('../middleware/apenasEstoquista');
 
-// Proteção: apenas administradores (admin_loja ou super_admin)
+// Proteção: apenas administradores (admin_loja, super_admin) ou estoquistas
+// Estoquistas têm acesso para consultar o histórico/auditoria de ações de estoque e fornecedores,
+// com isolamento estrito por loja (fail-closed)
 router.use(authMiddleware);
-router.use(apenasAdmin);
+router.use(apenasEstoquista);
 
 /**
  * GET /api/audit-log
  * Lista registros de auditoria com paginação e filtro por loja
  * - super_admin: pode filtrar por qualquer loja ou ver todas
- * - admin_loja: restrito estritamente aos registros da própria loja
+ * - admin_loja e funcionario (estoquista): restrito estritamente aos registros da própria loja
  */
 router.get('/', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
     const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
     const acao = req.query.acao || null;
+    const entidade = req.query.entidade || null;
     const usuarioId = req.query.usuario_id ? parseInt(req.query.usuario_id, 10) : null;
 
     let lojaId = null;
-    if (req.role === 'admin_loja') {
+    if (req.role === 'admin_loja' || req.role === 'funcionario') {
       lojaId = req.lojaId;
     } else if (req.query.loja_id) {
       lojaId = parseInt(req.query.loja_id, 10);
@@ -32,6 +35,7 @@ router.get('/', async (req, res) => {
       lojaId,
       usuarioId,
       acao,
+      entidade,
       limite: limit,
       offset
     });
