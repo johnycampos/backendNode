@@ -66,18 +66,59 @@ class VendaController {
         }
       }
 
-      // Calcular valor total da venda
+      // Calcular valor total bruto da venda
       const valorTotalCalculado = vendaData.itens.reduce((total, item) => {
         return total + (item.quantidade * item.preco_unitario);
       }, 0);
 
-      // Validar se o valor total enviado corresponde ao calculado
-      if (Math.abs(valorTotalCalculado - vendaData.valor_total) > 0.01) {
+      // Validação de desconto (opcional)
+      const descValor = Number(vendaData.desconto_valor) || 0;
+      const descPerc = Number(vendaData.desconto_percentual) || 0;
+
+      if (descValor < 0 || descPerc < 0) {
+        return res.status(400).json({ error: 'Valores de desconto não podem ser negativos' });
+      }
+
+      if (descValor > 0 && descPerc > 0) {
+        return res.status(400).json({ error: 'Informe apenas desconto_valor OU desconto_percentual, não ambos' });
+      }
+
+      if (descPerc > 100) {
+        return res.status(400).json({ error: 'Desconto percentual não pode ser maior que 100%' });
+      }
+
+      let descontoAplicado = 0;
+      if (descValor > 0) {
+        descontoAplicado = descValor;
+      } else if (descPerc > 0) {
+        descontoAplicado = (valorTotalCalculado * descPerc) / 100;
+      }
+
+      if (descontoAplicado > valorTotalCalculado) {
+        return res.status(400).json({ error: 'Desconto não pode ser superior ao valor total dos itens' });
+      }
+
+      const valorEsperado = Math.max(0, valorTotalCalculado - descontoAplicado);
+
+      // Validar se o valor total enviado corresponde ao calculado com desconto
+      if (Math.abs(valorEsperado - Number(vendaData.valor_total)) > 0.01) {
         return res.status(400).json({ 
-          error: 'Valor total não corresponde à soma dos itens',
+          error: 'Valor total não corresponde à soma dos itens com desconto aplicado',
           valor_calculado: valorTotalCalculado,
+          desconto_aplicado: descontoAplicado,
+          valor_esperado: valorEsperado,
           valor_enviado: vendaData.valor_total
         });
+      }
+
+      // Concatenar informação do desconto em observações sem necessidade de nova coluna
+      if (descontoAplicado > 0) {
+        const infoDesconto = descPerc > 0
+          ? `Desconto aplicado: ${descPerc}% (R$ ${descontoAplicado.toFixed(2).replace('.', ',')})`
+          : `Desconto aplicado: R$ ${descontoAplicado.toFixed(2).replace('.', ',')}`;
+        vendaData.observacoes = vendaData.observacoes
+          ? `${vendaData.observacoes}. ${infoDesconto}`
+          : infoDesconto;
       }
 
       const venda = await Venda.criar(vendaData);
