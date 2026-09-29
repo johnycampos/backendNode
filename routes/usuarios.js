@@ -236,6 +236,9 @@ router.delete('/:id', async (req, res) => {
       if (usuarioAlvo.role === 'super_admin') {
         return res.status(403).json({ error: 'Você não tem permissão para deletar um super_admin' });
       }
+      if (usuarioAlvo.role === 'admin_loja') {
+        return res.status(403).json({ error: 'Apenas o super_admin pode remover outro administrador de loja' });
+      }
     }
 
     const deletado = await Usuario.deletar(usuarioAlvo.id);
