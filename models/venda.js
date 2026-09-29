@@ -84,12 +84,15 @@ class Venda {
              json_agg(json_build_object(
                'id', iv.id,
                'item_id', iv.item_id,
+               'codigo_item', it.codigo,
+               'nome_item', it.nome,
                'quantidade', iv.quantidade,
                'preco_unitario', iv.preco_unitario,
                'valor_total_item', iv.valor_total_item
              )) as itens
       FROM vendas v
       LEFT JOIN itens_venda iv ON v.id = iv.venda_id
+      LEFT JOIN itens it ON iv.item_id = it.id
       LEFT JOIN lojas lj ON v.loja_id = lj.id
       LEFT JOIN users u ON v.vendedor_id = u.id
       WHERE v.id = $1
@@ -131,12 +134,15 @@ class Venda {
              json_agg(json_build_object(
                'id', iv.id,
                'item_id', iv.item_id,
+               'codigo_item', it.codigo,
+               'nome_item', it.nome,
                'quantidade', iv.quantidade,
                'preco_unitario', iv.preco_unitario,
                'valor_total_item', iv.valor_total_item
              )) as itens
       FROM vendas v
       LEFT JOIN itens_venda iv ON v.id = iv.venda_id
+      LEFT JOIN itens it ON iv.item_id = it.id
       LEFT JOIN lojas lj ON v.loja_id = lj.id
       LEFT JOIN users u ON v.vendedor_id = u.id
       WHERE 1=1
