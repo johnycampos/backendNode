@@ -68,7 +68,7 @@ router.get('/:id', async (req, res) => {
 // Criar novo usuário / funcionário
 router.post('/', async (req, res) => {
   try {
-    const { username, password, menus, horarios, ativo } = req.body;
+    const { username, password, menus, horarios, ativo, estoquista } = req.body;
     let { role, loja_id } = req.body;
 
     if (!username || !password) {
@@ -116,7 +116,8 @@ router.post('/', async (req, res) => {
       password: hashedPassword,
       role,
       loja_id,
-      ativo: ativo !== undefined ? ativo : true
+      ativo: ativo !== undefined ? ativo : true,
+      estoquista: Boolean(estoquista)
     });
 
     // Associa menus se fornecidos
@@ -133,7 +134,8 @@ router.post('/', async (req, res) => {
     AuditLog.registrar(req.userId, novoUsuario.loja_id, 'criar_usuario', 'users', novoUsuario.id, {
       username: novoUsuario.username,
       role: novoUsuario.role,
-      ativo: novoUsuario.ativo
+      ativo: novoUsuario.ativo,
+      estoquista: novoUsuario.estoquista
     });
 
     res.status(201).json({
@@ -176,6 +178,7 @@ router.put('/:id', async (req, res) => {
     if (req.body.username !== undefined) dadosAtualizar.username = req.body.username;
     if (req.body.role !== undefined) dadosAtualizar.role = req.body.role;
     if (req.body.ativo !== undefined) dadosAtualizar.ativo = req.body.ativo;
+    if (req.body.estoquista !== undefined) dadosAtualizar.estoquista = Boolean(req.body.estoquista);
     if (req.body.loja_id !== undefined && req.role === 'super_admin') {
       const lojaValida = await Loja.buscarPorId(req.body.loja_id);
       if (!lojaValida || !lojaValida.ativo) {
@@ -204,7 +207,8 @@ router.put('/:id', async (req, res) => {
     AuditLog.registrar(req.userId, usuarioAtualizado.loja_id, 'atualizar_usuario', 'users', usuarioAtualizado.id, {
       username: usuarioAtualizado.username,
       role: usuarioAtualizado.role,
-      ativo: usuarioAtualizado.ativo
+      ativo: usuarioAtualizado.ativo,
+      estoquista: usuarioAtualizado.estoquista
     });
 
     res.json({

@@ -49,7 +49,8 @@ router.get('/me', authMiddleware, async (req, res) => {
         role: user.role,
         loja_id: user.loja_id,
         loja_nome: user.loja_nome,
-        is_matriz: user.is_matriz
+        is_matriz: user.is_matriz,
+        estoquista: user.estoquista || false
       },
       menus: menusHabilitados,
       menusChaves: menusHabilitados.map(m => m.chave)
@@ -163,17 +164,19 @@ router.post('/login', loginLimiter, async (req, res) => {
     const menus = await Menu.listarHabilitadosPorUsuario(user.id);
     const menusChaves = menus.map(m => m.chave);
 
-    // Gera token com loja_id e role incluídos no payload
+    // Gera token com loja_id, role e estoquista incluídos no payload
     const payload = {
       id: user.id,
       username: user.username,
       role: user.role,
       loja_id: user.loja_id,
+      estoquista: user.estoquista || false,
       user: {
         id: user.id,
         username: user.username,
         role: user.role,
-        loja_id: user.loja_id
+        loja_id: user.loja_id,
+        estoquista: user.estoquista || false
       },
       autenticado: true
     };
@@ -198,6 +201,7 @@ router.post('/login', loginLimiter, async (req, res) => {
           role: user.role,
           loja_id: user.loja_id,
           loja_nome: user.loja_nome,
+          estoquista: user.estoquista || false,
           menus: menusChaves
         },
         menus,

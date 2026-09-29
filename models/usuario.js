@@ -4,13 +4,13 @@ class Usuario {
   /**
    * Cria um novo usuário vinculado a uma loja
    */
-  static async criar({ username, password, role, loja_id, ativo = true }) {
+  static async criar({ username, password, role, loja_id, ativo = true, estoquista = false }) {
     const query = `
-      INSERT INTO users (username, password, role, loja_id, ativo)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, username, role, loja_id, ativo
+      INSERT INTO users (username, password, role, loja_id, ativo, estoquista)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, username, role, loja_id, ativo, estoquista
     `;
-    const values = [username, password, role, loja_id, ativo];
+    const values = [username, password, role, loja_id, ativo, estoquista];
     const result = await pool.query(query, values);
     return result.rows[0];
   }
@@ -20,7 +20,7 @@ class Usuario {
    */
   static async buscarPorUsername(username) {
     const query = `
-      SELECT u.id, u.username, u.password, u.role, u.loja_id, u.ativo, l.nome as loja_nome, l.is_matriz
+      SELECT u.id, u.username, u.password, u.role, u.loja_id, u.ativo, u.estoquista, l.nome as loja_nome, l.is_matriz
       FROM users u
       LEFT JOIN lojas l ON u.loja_id = l.id
       WHERE u.username = $1
@@ -34,7 +34,7 @@ class Usuario {
    */
   static async buscarPorId(id) {
     const query = `
-      SELECT u.id, u.username, u.role, u.loja_id, u.ativo, l.nome as loja_nome, l.is_matriz
+      SELECT u.id, u.username, u.role, u.loja_id, u.ativo, u.estoquista, l.nome as loja_nome, l.is_matriz
       FROM users u
       LEFT JOIN lojas l ON u.loja_id = l.id
       WHERE u.id = $1
@@ -48,7 +48,7 @@ class Usuario {
    */
   static async listarTodos() {
     const query = `
-      SELECT u.id, u.username, u.role, u.loja_id, u.ativo, l.nome as loja_nome, l.is_matriz
+      SELECT u.id, u.username, u.role, u.loja_id, u.ativo, u.estoquista, l.nome as loja_nome, l.is_matriz
       FROM users u
       LEFT JOIN lojas l ON u.loja_id = l.id
       ORDER BY l.nome ASC, u.username ASC
@@ -63,7 +63,7 @@ class Usuario {
    */
   static async listarPorLoja(loja_id = null) {
     let query = `
-      SELECT u.id, u.username, u.role, u.loja_id, u.ativo, l.nome as loja_nome, l.is_matriz
+      SELECT u.id, u.username, u.role, u.loja_id, u.ativo, u.estoquista, l.nome as loja_nome, l.is_matriz
       FROM users u
       LEFT JOIN lojas l ON u.loja_id = l.id
     `;
@@ -81,7 +81,7 @@ class Usuario {
   }
 
   /**
-   * Atualiza dados de um usuário (incluindo status ativo e opcionalmente senha)
+   * Atualiza dados de um usuário (incluindo status ativo, estoquista e opcionalmente senha)
    */
   static async atualizar(id, dados) {
     const campos = [];
@@ -108,6 +108,11 @@ class Usuario {
       values.push(dados.ativo);
     }
 
+    if (dados.estoquista !== undefined) {
+      campos.push(`estoquista = $${idx++}`);
+      values.push(dados.estoquista);
+    }
+
     if (dados.password !== undefined && dados.password !== '') {
       campos.push(`password = $${idx++}`);
       values.push(dados.password);
@@ -122,7 +127,7 @@ class Usuario {
       UPDATE users
       SET ${campos.join(', ')}
       WHERE id = $${idx}
-      RETURNING id, username, role, loja_id, ativo
+      RETURNING id, username, role, loja_id, ativo, estoquista
     `;
 
     const result = await pool.query(query, values);
