@@ -16,4 +16,9 @@ router.put('/:id', apenasEstoquista, ItemController.atualizar);
 router.delete('/:id', apenasEstoquista, ItemController.deletar);
 router.patch('/:id/estoque', apenasEstoquista, ItemController.atualizarEstoque);
 
+// Vínculo item <-> fornecedores
+router.get('/:id/fornecedores', ItemController.listarFornecedores);
+router.post('/:id/fornecedores', apenasEstoquista, ItemController.adicionarFornecedor);
+router.delete('/:id/fornecedores/:fornecedorId', apenasEstoquista, ItemController.removerFornecedor);
+
 module.exports = router; 

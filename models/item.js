@@ -249,6 +249,39 @@ class Item {
     const result = await pool.query(query, values);
     return result.rows[0];
   }
+
+  static async listarFornecedores(itemId) {
+    const query = `
+      SELECT f.*
+      FROM fornecedores f
+      JOIN item_fornecedores if_rel ON f.id = if_rel.fornecedor_id
+      WHERE if_rel.item_id = $1
+      ORDER BY f.nome
+    `;
+    const result = await pool.query(query, [itemId]);
+    return result.rows;
+  }
+
+  static async adicionarFornecedor(itemId, fornecedorId) {
+    const query = `
+      INSERT INTO item_fornecedores (item_id, fornecedor_id)
+      VALUES ($1, $2)
+      ON CONFLICT (item_id, fornecedor_id) DO NOTHING
+      RETURNING *
+    `;
+    const result = await pool.query(query, [itemId, fornecedorId]);
+    return result.rows[0] || { item_id: itemId, fornecedor_id: fornecedorId };
+  }
+
+  static async removerFornecedor(itemId, fornecedorId) {
+    const query = `
+      DELETE FROM item_fornecedores
+      WHERE item_id = $1 AND fornecedor_id = $2
+      RETURNING *
+    `;
+    const result = await pool.query(query, [itemId, fornecedorId]);
+    return result.rows[0];
+  }
 }
 
 module.exports = Item;

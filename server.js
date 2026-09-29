@@ -22,6 +22,7 @@ app.get('/api/test', (req, res) => {
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/fabricantes', require('./routes/fabricantes'));
+app.use('/api/fornecedores', require('./routes/fornecedores'));
 app.use('/api/grupos', require('./routes/grupos'));
 app.use('/api/subgrupos', require('./routes/subgrupos'));
 app.use('/api/unidades', require('./routes/unidades'));
