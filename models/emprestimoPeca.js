@@ -1,5 +1,6 @@
 const { pool } = require('../db');
 const Item = require('./item');
+const Loja = require('./loja');
 
 class EmprestimoPeca {
   /**
@@ -21,6 +22,20 @@ class EmprestimoPeca {
       throw err;
     }
 
+    const lojaDestinoIdNum = parseInt(lojaDestinoId, 10);
+    if (isNaN(lojaDestinoIdNum) || lojaDestinoIdNum <= 0) {
+      const err = new Error('Loja de destino inválida');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const lojaDestino = await Loja.buscarPorId(lojaDestinoIdNum);
+    if (!lojaDestino || !lojaDestino.ativo) {
+      const err = new Error('Loja de destino não encontrada ou inativa');
+      err.statusCode = 400;
+      throw err;
+    }
+
     // Busca o item de origem para extrair a loja real e validar o estoque atual
     const itemOrigem = await Item.buscarPorId(itemOrigemId);
     if (!itemOrigem) {
@@ -30,7 +45,7 @@ class EmprestimoPeca {
     }
 
     const lojaOrigemId = itemOrigem.loja_id;
-    if (Number(lojaDestinoId) === Number(lojaOrigemId)) {
+    if (Number(lojaDestinoIdNum) === Number(lojaOrigemId)) {
       const err = new Error('Não é permitido solicitar empréstimo de item da mesma loja');
       err.statusCode = 400;
       throw err;
@@ -63,7 +78,7 @@ class EmprestimoPeca {
       itemOrigem.codigo,
       itemOrigem.nome,
       lojaOrigemId,
-      lojaDestinoId,
+      lojaDestinoIdNum,
       qtd,
       solicitanteId,
       observacoes

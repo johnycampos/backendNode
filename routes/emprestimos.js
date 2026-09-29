@@ -131,7 +131,12 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
   try {
-    const emprestimo = await EmprestimoPeca.buscarPorId(req.params.id);
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID do empréstimo inválido' });
+    }
+
+    const emprestimo = await EmprestimoPeca.buscarPorId(id);
     if (!emprestimo) {
       return res.status(404).json({ error: 'Empréstimo não encontrado' });
     }
@@ -164,8 +169,13 @@ router.get('/:id', async (req, res) => {
  */
 router.put('/:id/aprovar', apenasAdmin, async (req, res) => {
   try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID do empréstimo inválido' });
+    }
+
     const aprovado = await EmprestimoPeca.aprovar({
-      id: req.params.id,
+      id,
       aprovadorId: req.userId,
       lojaAdmin: req.lojaId,
       roleAdmin: req.role
@@ -197,10 +207,15 @@ router.put('/:id/aprovar', apenasAdmin, async (req, res) => {
  */
 router.put('/:id/rejeitar', apenasAdmin, async (req, res) => {
   try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID do empréstimo inválido' });
+    }
+
     const { motivo } = req.body;
 
     const rejeitado = await EmprestimoPeca.rejeitar({
-      id: req.params.id,
+      id,
       aprovadorId: req.userId,
       motivo,
       lojaAdmin: req.lojaId,
@@ -230,6 +245,11 @@ router.put('/:id/rejeitar', apenasAdmin, async (req, res) => {
  */
 router.put('/:id/pagamento', apenasAdmin, async (req, res) => {
   try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id) || id <= 0) {
+      return res.status(400).json({ error: 'ID do empréstimo inválido' });
+    }
+
     const { forma_pagamento } = req.body;
 
     if (!forma_pagamento) {
@@ -237,7 +257,7 @@ router.put('/:id/pagamento', apenasAdmin, async (req, res) => {
     }
 
     const pago = await EmprestimoPeca.registrarPagamento({
-      id: req.params.id,
+      id,
       formaPagamento: forma_pagamento,
       registradoPor: req.userId,
       lojaAdmin: req.lojaId,
