@@ -35,6 +35,7 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/audit-log', require('./routes/auditLogRoutes'));
 app.use('/api/relatorios', require('./routes/relatorios'));
 app.use('/api/emprestimos', require('./routes/emprestimos'));
+app.use('/api/comissoes', require('./routes/comissoes'));
 
 // Start server
 const PORT = process.env.PORT || 5000;
