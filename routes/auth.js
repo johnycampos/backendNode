@@ -10,12 +10,16 @@ const HorarioPermitido = require('../models/horarioPermitido');
 const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
 
-// Limitador de tentativas de login contra ataques de força bruta (5 tentativas por 15 min)
+// Limitador de tentativas de login contra ataques de força bruta
+// (em memória do processo — reinicia ao reiniciar o container/revisão)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
+  // Não conta tentativas bem-sucedidas, só as falhas (login errado/senha errada/bloqueio de horário),
+  // para não travar quem está testando múltiplas contas válidas em sequência.
+  skipSuccessfulRequests: true,
   message: {
     message: 'Muitas tentativas de login a partir deste IP. Tente novamente após 15 minutos.'
   }
