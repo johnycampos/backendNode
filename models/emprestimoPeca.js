@@ -94,7 +94,7 @@ class EmprestimoPeca {
    * - admin_loja: visualiza solicitações onde a própria loja é origem OU destino
    * - funcionario: visualiza estritamente os que solicitou (solicitante_id = seu id)
    */
-  static async listar({ role, lojaId, userId, status = null, comoOrigem = false, comoDestino = false } = {}) {
+  static async listar({ role, estoquista = false, lojaId, userId, status = null, comoOrigem = false, comoDestino = false } = {}) {
     let query = `
       SELECT 
         ep.*,
@@ -114,14 +114,14 @@ class EmprestimoPeca {
     const values = [];
     let idx = 1;
 
-    // Escopo de visibilidade por papel
+    // Escopo de visibilidade por papel (admin_loja e estoquista compartilham o mesmo escopo: a própria loja)
     if (role === 'super_admin') {
       if (lojaId) {
         query += ` AND (ep.loja_origem_id = $${idx} OR ep.loja_destino_id = $${idx})`;
         values.push(lojaId);
         idx++;
       }
-    } else if (role === 'admin_loja') {
+    } else if (role === 'admin_loja' || estoquista === true) {
       if (comoOrigem) {
         query += ` AND ep.loja_origem_id = $${idx}`;
         values.push(lojaId);
@@ -136,7 +136,7 @@ class EmprestimoPeca {
         idx++;
       }
     } else {
-      // funcionario
+      // funcionario comum (sem flag estoquista)
       query += ` AND ep.solicitante_id = $${idx}`;
       values.push(userId);
       idx++;
@@ -187,7 +187,7 @@ class EmprestimoPeca {
    * 5. Localiza ou cria o item no catálogo da loja de destino com o mesmo código
    * 6. Atualiza o status para 'aprovado' e vincula item_destino_id
    */
-  static async aprovar({ id, aprovadorId, lojaAdmin, roleAdmin }) {
+  static async aprovar({ id, aprovadorId, lojaAdmin, roleAdmin, estoquistaAdmin = false }) {
     const client = await pool.connect();
 
     try {
@@ -210,8 +210,9 @@ class EmprestimoPeca {
       }
 
       // 2. Validação de autorização: A loja detentora do estoque (origem) é quem autoriza a saída
+      // (gerente admin_loja, super_admin, ou funcionário com flag "estoquista" da loja de origem)
       if (roleAdmin !== 'super_admin' && Number(lojaAdmin) !== Number(emprestimo.loja_origem_id)) {
-        const err = new Error('Apenas o administrador da loja de origem (ou super_admin) pode aprovar a saída de peças do seu estoque');
+        const err = new Error('Apenas o administrador ou estoquista da loja de origem (ou super_admin) pode aprovar a saída de peças do seu estoque');
         err.statusCode = 403;
         throw err;
       }
@@ -351,7 +352,7 @@ class EmprestimoPeca {
     }
 
     if (roleAdmin !== 'super_admin' && Number(lojaAdmin) !== Number(emprestimo.loja_origem_id)) {
-      const err = new Error('Apenas o administrador da loja de origem (ou super_admin) pode rejeitar o empréstimo');
+      const err = new Error('Apenas o administrador ou estoquista da loja de origem (ou super_admin) pode rejeitar o empréstimo');
       err.statusCode = 403;
       throw err;
     }

@@ -3,7 +3,7 @@ const router = express.Router();
 const EmprestimoPeca = require('../models/emprestimoPeca');
 const AuditLog = require('../models/auditLog');
 const authMiddleware = require('../middleware/auth');
-const apenasAdmin = require('../middleware/apenasAdmin');
+const apenasEstoquista = require('../middleware/apenasEstoquista');
 
 // Todas as rotas de empréstimos requerem autenticação
 router.use(authMiddleware);
@@ -102,8 +102,8 @@ router.post('/', async (req, res) => {
  * GET /api/emprestimos
  * Lista empréstimos respeitando o escopo de tenant e papéis:
  * - super_admin: vê todos
- * - admin_loja: vê os que envolvem sua loja (origem ou destino)
- * - funcionario: vê apenas suas próprias solicitações
+ * - admin_loja OU funcionário com flag "estoquista": vê os que envolvem sua loja (origem ou destino)
+ * - funcionario comum: vê apenas suas próprias solicitações
  */
 router.get('/', async (req, res) => {
   try {
@@ -111,6 +111,7 @@ router.get('/', async (req, res) => {
 
     const emprestimos = await EmprestimoPeca.listar({
       role: req.role,
+      estoquista: req.estoquista,
       lojaId: req.lojaId,
       userId: req.userId,
       status: status || null,
@@ -165,9 +166,9 @@ router.get('/:id', async (req, res) => {
 /**
  * PUT /api/emprestimos/:id/aprovar
  * Aprova o empréstimo, decrementa o estoque da loja de origem e credita na de destino.
- * Apenas administradores (apenasAdmin: admin_loja da loja de origem ou super_admin).
+ * admin_loja (gerente) da loja de origem, super_admin, ou funcionário com flag "estoquista".
  */
-router.put('/:id/aprovar', apenasAdmin, async (req, res) => {
+router.put('/:id/aprovar', apenasEstoquista, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id) || id <= 0) {
@@ -203,9 +204,9 @@ router.put('/:id/aprovar', apenasAdmin, async (req, res) => {
 /**
  * PUT /api/emprestimos/:id/rejeitar
  * Rejeita o empréstimo com motivo opcional.
- * Apenas administradores (apenasAdmin: admin_loja da loja de origem ou super_admin).
+ * admin_loja (gerente) da loja de origem, super_admin, ou funcionário com flag "estoquista".
  */
-router.put('/:id/rejeitar', apenasAdmin, async (req, res) => {
+router.put('/:id/rejeitar', apenasEstoquista, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id) || id <= 0) {
@@ -241,9 +242,9 @@ router.put('/:id/rejeitar', apenasAdmin, async (req, res) => {
 /**
  * PUT /api/emprestimos/:id/pagamento
  * Registra o pagamento financeiro referente ao empréstimo de peças.
- * Apenas administradores (apenasAdmin).
+ * admin_loja (gerente), super_admin, ou funcionário com flag "estoquista".
  */
-router.put('/:id/pagamento', apenasAdmin, async (req, res) => {
+router.put('/:id/pagamento', apenasEstoquista, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id) || id <= 0) {
